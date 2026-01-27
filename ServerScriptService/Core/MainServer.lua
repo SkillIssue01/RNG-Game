@@ -1,7 +1,7 @@
 -- Script basique
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RNGService = require(script.Parent.RNGService)
-local BiomeService = require(script.Parent.BiomeService)
+local RNGService = require(script.Parent:WaitForChild("RNGService"))
+local BiomeService = require(script.Parent:WaitForChild("BiomeService"))
 
 local RequestRoll = ReplicatedStorage.Events.RequestRoll
 

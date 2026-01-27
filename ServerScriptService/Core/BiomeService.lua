@@ -1,31 +1,28 @@
--- Script basique
-local BiomeService = {}
+-- Module Script
+local BiomeService = {} -- Étape 1 : On crée la table
 
--- Paramètres de détection
-local overlapParams = OverlapParams.new()
-overlapParams.FilterType = Enum.RaycastFilterType.Include
-
-function BiomeService.GetCurrentBiome(player)
+-- Étape 2 : On attache la fonction à la table (BIEN UTILISER LE POINT)
+function BiomeService.GetCurrentBiome(player) 
 	local character = player.Character
 	if not character or not character:FindFirstChild("HumanoidRootPart") then 
 		return "Plaine" 
 	end
 
-	-- On cherche les zones dans Workspace.Zones
-	overlapParams.FilterDescendantsInstances = {workspace.Zones}
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Include
+	overlapParams.FilterDescendantsInstances = {workspace:WaitForChild("Zones")} -- Ajout de sécurité
 
 	local rootPart = character.HumanoidRootPart
 	local parts = workspace:GetPartBoundsInRadius(rootPart.Position, 2, overlapParams)
 
 	for _, part in ipairs(parts) do
-		-- On récupère le nom du biome via l'attribut que nous avons créé
 		local biomeName = part:GetAttribute("BiomeName")
 		if biomeName then
 			return biomeName
 		end
 	end
 
-	return "Plaine" -- Biome par défaut
+	return "Plaine"
 end
 
-return BiomeService
+return BiomeService -- Étape 3 : ON REVOIE LA TABLE (Indispensable)
