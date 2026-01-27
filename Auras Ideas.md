@@ -1,0 +1,30 @@
+# Idées d'auras
+```md
+- Common (1/2)
+- Uncommon (1/4)
+- Rare (1/8)
+- Epic (1/20)
+- Famous (1/25)
+- Gust (1/90)
+- Crystal (1/128)
+- Bloom (1/250)
+- Magnetic (1/400)
+- Glacier (1/600)
+- Clover (1/777)
+- Lunar (1/1,500)
+- Solar (1/3,000)
+- SixSeven (1/6767)
+- Nostalgia (1/7,777)
+- Angel (1/10,000)
+- Zephyr (1/15,000)
+- Celestial (1/50,000)
+- Gaia (1/150,000)
+- Chronos (1/250,000)
+- Hollow (1/450,000)
+- Apex (1/750,000)
+- Yggdrasil (1/1,000,000)
+- Aurora (1/2,400,000)
+- The One (1/1,000,000,000)
+- Eclipse (1/50,000,000,000) [requiert eclipse weather]
+
+```
