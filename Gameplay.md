@@ -21,7 +21,7 @@
 ```
 - Fast roll (79 Robux)
 - More family slots (199 Robux) -> permet d'avoir 2 slots en plus ou roll
-- Eclipse
+- Eclipse remote (599 Robux) -> a usage unique
 ```
 
 ## Biomes :
@@ -31,7 +31,7 @@
 - Hell
 - Ice land
 - Desert
-- Holy Temple (area requiert aura radom)
+- Holy Temple (area requiert aura random)
 ```
 
 ## Options :
