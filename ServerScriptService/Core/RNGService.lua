@@ -1,4 +1,4 @@
--- Script basique
+-- Module Script
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AuraData = require(ReplicatedStorage.Modules.AuraData)
 
@@ -6,11 +6,12 @@ local RNGService = {}
 
 -- Fonction principale de tirage
 function RNGService.Roll(player, biomeName)
-	local biomeAuras = AuraData.Biomes[biomeName] or AuraData.Biomes["Plaine"]
-	
+	local biomeData = AuraData.Biomes[biomeName] or AuraData.Biomes["Plaine"]
+	local biomeAuras = biomeData.Auras
+
 	-- On génère un nombre aléatoire (on peut utiliser Random.new() pour plus de précision)
 	local rng = Random.new()
-	
+
 	-- On parcourt les auras du biome (déjà triées de la plus rare à la plus commune)
 	for _, aura in ipairs(biomeAuras) do
 		-- On vérifie si le joueur "tombe" sur la chance (1 sur aura.Chance)
