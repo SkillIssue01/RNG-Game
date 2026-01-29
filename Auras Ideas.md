@@ -24,6 +24,13 @@
 - Apex (1/750,000)
 - Yggdrasil (1/1,000,000)
 - Aurora (1/2,400,000)
+- Supernova (1/10,000,000)
+- Nebula (1/25,000,000)
+- Meltdown (1/40,000,000)
+- Singularity (1/150,000,000)
+- Entropy (1/300,000,000)
+- Source Code (1/500,000,000)
+- Genesis (1/750,000,000)
 - The One (1/1,000,000,000)
 - Eclipse (1/50,000,000,000) [requiert eclipse weather]
 
