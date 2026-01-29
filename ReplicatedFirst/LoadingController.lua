@@ -1,5 +1,3 @@
--- Local Script 
-
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
