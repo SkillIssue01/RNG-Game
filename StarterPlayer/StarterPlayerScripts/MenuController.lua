@@ -1,5 +1,5 @@
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
-local ReplicatedStorage = game:GetService("ReplicatedStorage") -- Ajouté car manquant dans ton snippet
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -7,10 +7,8 @@ local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 local Debris = game:GetService("Debris")
 
--- On attend que l'event existe (Assure-toi qu'il est bien créé coté serveur !)
-local UpdateSpinsEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("UpdateSpins")
-
-local player = Players.LocalPlayer -- Définition du joueur local
+local player = Players.LocalPlayer
+local UpdateSpinsEvent = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("UpdateSpins")
 
 -- --- CONFIGURATION ---
 local COLORS = {
@@ -25,7 +23,7 @@ local COLORS = {
 	AccentBlueHover = Color3.fromRGB(80, 180, 255),
 
 	AccentRed = Color3.fromRGB(200, 40, 40),
-	AccentGreen = Color3.fromRGB(40, 200, 80), -- Pour le bouton Oui/Non
+	AccentGreen = Color3.fromRGB(40, 200, 80),
 	AccentGold = Color3.fromRGB(255, 180, 0),
 
 	TextWhite = Color3.fromRGB(240, 240, 240),
@@ -34,18 +32,11 @@ local COLORS = {
 	Glow = Color3.fromRGB(255, 255, 255)
 }
 
--- Récupération des spins depuis le Leaderstats
-local leaderstats = player:WaitForChild("leaderstats")
-local spinsValue = leaderstats:WaitForChild("Spins")
-local currentSpins = spinsValue.Value -- On initialise avec la valeur actuelle
+local currentSpins = 20 
 
--- Mise à jour automatique si le serveur change la valeur
-spinsValue.Changed:Connect(function(newVal)
-	currentSpins = newVal
-end)
-
-local currentEquippedFamilyData = nil -- Pour savoir ce qu'on a actuellement (pour le warning)
-local skippedFamilies = {} -- Table pour stocker les choix de l'autoskip (true = skip warning)
+-- Variables Logic
+local currentEquippedFamilyData = nil 
+local skippedFamilies = {} 
 
 local familiesData = {
 	{name = "Rookie", rarity = "COMMON", chanceVal = 79.37, displayChance = "79.37 %", color = Color3.fromRGB(180, 180, 180)},
@@ -56,8 +47,8 @@ local familiesData = {
 	{name = "Aura Farmer", rarity = "SECRET", chanceVal = 0.03, displayChance = "0.03 %", color = Color3.fromRGB(255, 255, 255)}, 
 }
 
--- Liste des raretés qui déclenchent le Warning par défaut (Sécurité)
 local SAFETY_RARITIES = {
+	["EPIC"] = true,      
 	["LEGENDARY"] = true,
 	["MYTHIC"] = true,
 	["SECRET"] = true
@@ -86,7 +77,7 @@ local function applyProStyle(guiObject, cornerRadius, strokeColor, strokeThickne
 	return nil
 end
 
--- === EFFETS VISUELS SPÉCIAUX ===
+-- === EFFETS VISUELS ===
 
 local function applyScrollingMythicEffect(uiStroke, textLabels)
 	uiStroke.Color = Color3.fromRGB(255, 120, 0)
@@ -151,7 +142,6 @@ local function applySecretSpin(uiStroke)
 	end)
 end
 
--- === EFFET GLITCH PUISSANT ===
 local function triggerGlitchEffect(realLabel, rollWindow)
 	if not realLabel or not rollWindow then return end
 	realLabel.TextTransparency = 1
@@ -186,7 +176,6 @@ local function triggerGlitchEffect(realLabel, rollWindow)
 	end)
 end
 
--- --- LOGIQUE CONFETTIS ---
 local function createConfettiExplosion(color, centerZone)
 	local centerPos = UDim2.new(0.5, 0, 0.35, 0)
 	for i = 1, 50 do
@@ -235,27 +224,60 @@ bgGradient.Rotation = 45
 bgGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, COLORS.BackgroundDark), ColorSequenceKeypoint.new(1, COLORS.PanelDark)})
 bgGradient.Parent = familyFrame
 
--- --- AUTOSKIP UI (Bas Gauche) ---
+-- --- BOUTON AUTOSKIP (INTÉGRÉ DANS LA BARRE) ---
+-- Barre du bas
+local bottomBar = Instance.new("Frame")
+bottomBar.Size = UDim2.new(1, 0, 0.15, 0)
+bottomBar.Position = UDim2.new(0, 0, 1, 0)
+bottomBar.AnchorPoint = Vector2.new(0, 1)
+bottomBar.BackgroundColor3 = COLORS.PanelDark
+bottomBar.Parent = familyFrame
+
+local sep = Instance.new("Frame")
+sep.Size = UDim2.new(1, 0, 0, 2)
+sep.BackgroundColor3 = COLORS.AccentBlue
+sep.BorderSizePixel = 0
+sep.Parent = bottomBar
+
 local autoSkipBtn = Instance.new("TextButton")
+autoSkipBtn.Name = "AutoSkipBtn"
 autoSkipBtn.Text = "AUTOSKIP"
-autoSkipBtn.Size = UDim2.fromOffset(120, 40)
-autoSkipBtn.Position = UDim2.new(0.02, 0, 0.95, 0)
-autoSkipBtn.AnchorPoint = Vector2.new(0, 1)
+autoSkipBtn.Size = UDim2.new(0, 130, 0, 60)
+autoSkipBtn.Position = UDim2.new(0.05, 0, 0.5, 0)
+autoSkipBtn.AnchorPoint = Vector2.new(0, 0.5)
 autoSkipBtn.BackgroundColor3 = COLORS.ButtonNormal
 autoSkipBtn.TextColor3 = COLORS.TextGray
 autoSkipBtn.Font = Enum.Font.GothamBold
 autoSkipBtn.TextSize = 14
-autoSkipBtn.Parent = familyFrame
+autoSkipBtn.ZIndex = 20 
+autoSkipBtn.Parent = bottomBar
 applyProStyle(autoSkipBtn, 6, COLORS.TextGray, 1)
 
+-- --- CALCUL DE LA TAILLE DU MENU AUTOSKIP ---
+-- 1. Compter les items valides
+local validItemsCount = 0
+for _, fam in ipairs(familiesData) do
+	if SAFETY_RARITIES[fam.rarity] then
+		validItemsCount = validItemsCount + 1
+	end
+end
+
+-- 2. Calculer la hauteur (Items * 30px + Padding + Marges)
+local ITEM_HEIGHT_SK = 30
+local PADDING_SK = 5
+local MARGIN_SK = 10 -- 5 top + 5 bottom
+local calculatedHeight = (validItemsCount * ITEM_HEIGHT_SK) + ((validItemsCount - 1) * PADDING_SK) + MARGIN_SK
+
+-- MENU AUTOSKIP (TAILLE ADAPTÉE)
 local autoSkipMenu = Instance.new("Frame")
 autoSkipMenu.Name = "AutoSkipMenu"
-autoSkipMenu.Size = UDim2.fromOffset(200, 250)
-autoSkipMenu.Position = UDim2.new(0, 0, -0.2, 0) -- Juste au dessus du bouton
-autoSkipMenu.AnchorPoint = Vector2.new(0, 1)
+-- On applique la hauteur calculée
+autoSkipMenu.Size = UDim2.fromOffset(200, calculatedHeight)
+autoSkipMenu.Position = UDim2.new(0.5, 0, 0, -25) -- 25 pixels au dessus du bouton
+autoSkipMenu.AnchorPoint = Vector2.new(0.5, 1)
 autoSkipMenu.BackgroundColor3 = COLORS.PanelDark
 autoSkipMenu.Visible = false
-autoSkipMenu.ZIndex = 15
+autoSkipMenu.ZIndex = 50 
 autoSkipMenu.Parent = autoSkipBtn
 applyProStyle(autoSkipMenu, 6, COLORS.AccentBlue, 1)
 
@@ -264,70 +286,74 @@ asList.Size = UDim2.new(1, -10, 1, -10)
 asList.Position = UDim2.fromOffset(5, 5)
 asList.BackgroundTransparency = 1
 asList.BorderSizePixel = 0
-asList.ScrollBarThickness = 4
+asList.ScrollBarThickness = 0 -- Scrollbar cachée car inutile (taille parfaite)
+asList.ZIndex = 51
 asList.Parent = autoSkipMenu
-local asLayout = Instance.new("UIListLayout"); asLayout.Padding = UDim.new(0,5); asLayout.Parent = asList
+local asLayout = Instance.new("UIListLayout"); asLayout.Padding = UDim.new(0, PADDING_SK); asLayout.Parent = asList
 
--- Génération des options Autoskip
+-- Génération Checkboxes Autoskip
 for _, fam in ipairs(familiesData) do
-	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 30)
-	row.BackgroundTransparency = 1
-	row.Parent = asList
+	if SAFETY_RARITIES[fam.rarity] then
+		local row = Instance.new("Frame")
+		row.Size = UDim2.new(1, 0, 0, ITEM_HEIGHT_SK)
+		row.BackgroundTransparency = 1
+		row.ZIndex = 52
+		row.Parent = asList
 
-	local lbl = Instance.new("TextLabel")
-	lbl.Text = fam.name
-	lbl.TextColor3 = fam.color
-	lbl.Size = UDim2.new(0.7, 0, 1, 0)
-	lbl.BackgroundTransparency = 1
-	lbl.Font = Enum.Font.GothamBold
-	lbl.TextXAlignment = Enum.TextXAlignment.Left
-	lbl.TextSize = 12
-	lbl.Parent = row
+		local lbl = Instance.new("TextLabel")
+		lbl.Text = fam.name
+		lbl.TextColor3 = fam.color
+		lbl.Size = UDim2.new(0.7, 0, 1, 0)
+		lbl.BackgroundTransparency = 1
+		lbl.Font = Enum.Font.GothamBold
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
+		lbl.TextSize = 12
+		lbl.ZIndex = 52
+		lbl.Parent = row
 
-	local box = Instance.new("TextButton")
-	box.Size = UDim2.fromOffset(20, 20)
-	box.Position = UDim2.new(1, -25, 0.5, 0)
-	box.AnchorPoint = Vector2.new(0, 0.5)
-	box.BackgroundColor3 = COLORS.ButtonNormal
-	box.Text = ""
-	box.Parent = row
-	applyProStyle(box, 4, COLORS.TextGray, 1)
+		local box = Instance.new("TextButton")
+		box.Size = UDim2.fromOffset(20, 20)
+		box.Position = UDim2.new(1, -10, 0.5, 0)
+		box.AnchorPoint = Vector2.new(1, 0.5)
+		box.BackgroundColor3 = COLORS.ButtonNormal
+		box.Text = ""
+		box.ZIndex = 52
+		box.Parent = row
+		applyProStyle(box, 4, COLORS.TextGray, 1)
 
-	-- Logique Checkbox
-	box.MouseButton1Click:Connect(function()
-		if skippedFamilies[fam.name] then
-			-- On décoche (Le warning sera actif)
-			skippedFamilies[fam.name] = false
-			box.BackgroundColor3 = COLORS.ButtonNormal
-			box.Text = ""
-		else
-			-- On coche (Le warning sera sauté)
-			skippedFamilies[fam.name] = true
-			box.BackgroundColor3 = COLORS.AccentBlue
-			box.Text = "✓"
-			box.TextColor3 = COLORS.TextWhite
-		end
-	end)
+		box.MouseButton1Click:Connect(function()
+			if skippedFamilies[fam.name] then
+				skippedFamilies[fam.name] = false
+				box.BackgroundColor3 = COLORS.ButtonNormal
+				box.Text = ""
+			else
+				skippedFamilies[fam.name] = true
+				box.BackgroundColor3 = COLORS.AccentBlue
+				box.Text = "✓"
+				box.TextColor3 = COLORS.TextWhite
+			end
+		end)
+	end
 end
-asList.CanvasSize = UDim2.new(0,0,0, asLayout.AbsoluteContentSize.Y)
+asList.CanvasSize = UDim2.new(0,0,0, 0) -- Pas de scroll
 
 autoSkipBtn.MouseButton1Click:Connect(function()
 	autoSkipMenu.Visible = not autoSkipMenu.Visible
 end)
+
 
 -- --- WARNING POPUP ---
 local warningFrame = Instance.new("Frame")
 warningFrame.Name = "WarningFrame"
 warningFrame.Size = UDim2.fromScale(1, 1)
 warningFrame.BackgroundColor3 = Color3.new(0,0,0)
-warningFrame.BackgroundTransparency = 0.6
+warningFrame.BackgroundTransparency = 0.85 -- Transparence augmentée
 warningFrame.Visible = false
-warningFrame.ZIndex = 20
-warningFrame.Parent = screenGui -- Pour couvrir tout l'écran
+warningFrame.ZIndex = 100 
+warningFrame.Parent = screenGui 
 
 local warnBox = Instance.new("Frame")
-warnBox.Size = UDim2.fromOffset(400, 200)
+warnBox.Size = UDim2.fromOffset(450, 220)
 warnBox.Position = UDim2.fromScale(0.5, 0.5)
 warnBox.AnchorPoint = Vector2.new(0.5, 0.5)
 warnBox.BackgroundColor3 = COLORS.PanelDark
@@ -338,42 +364,46 @@ local warnTitle = Instance.new("TextLabel")
 warnTitle.Text = "WARNING!"
 warnTitle.Font = Enum.Font.GothamBlack
 warnTitle.TextColor3 = COLORS.AccentRed
-warnTitle.TextSize = 32
+warnTitle.TextSize = 36
 warnTitle.Size = UDim2.new(1, 0, 0.3, 0)
 warnTitle.BackgroundTransparency = 1
 warnTitle.Parent = warnBox
 
 local warnDesc = Instance.new("TextLabel")
 warnDesc.Name = "Desc"
-warnDesc.Text = "You are about to skip a high rarity aura. Continue?"
+warnDesc.Text = "Desc"
 warnDesc.Font = Enum.Font.GothamBold
 warnDesc.TextColor3 = COLORS.TextWhite
-warnDesc.TextSize = 16
+warnDesc.TextSize = 18
 warnDesc.TextWrapped = true
+warnDesc.RichText = true
 warnDesc.Size = UDim2.new(0.9, 0, 0.3, 0)
-warnDesc.Position = UDim2.fromScale(0.5, 0.4)
+warnDesc.Position = UDim2.fromScale(0.5, 0.45)
 warnDesc.AnchorPoint = Vector2.new(0.5, 0.5)
 warnDesc.BackgroundTransparency = 1
-warnDesc.RichText = true -- Important pour la couleur du nom
 warnDesc.Parent = warnBox
 
 local warnYes = Instance.new("TextButton")
-warnYes.Text = "YES, SKIP"
-warnYes.Size = UDim2.fromOffset(120, 40)
-warnYes.Position = UDim2.new(0.3, 0, 0.8, 0)
+warnYes.Text = "SKIP ANYWAY"
+warnYes.Size = UDim2.fromOffset(140, 45)
+warnYes.Position = UDim2.new(0.25, 0, 0.85, 0)
 warnYes.AnchorPoint = Vector2.new(0.5, 0.5)
 warnYes.BackgroundColor3 = COLORS.ButtonNormal
 warnYes.TextColor3 = COLORS.TextGray
+warnYes.Font = Enum.Font.GothamBold
+warnYes.TextSize = 14
 warnYes.Parent = warnBox
 applyProStyle(warnYes, 6, COLORS.TextGray, 1)
 
 local warnNo = Instance.new("TextButton")
-warnNo.Text = "NO, KEEP"
-warnNo.Size = UDim2.fromOffset(120, 40)
-warnNo.Position = UDim2.new(0.7, 0, 0.8, 0)
+warnNo.Text = "KEEP"
+warnNo.Size = UDim2.fromOffset(140, 45)
+warnNo.Position = UDim2.new(0.75, 0, 0.85, 0)
 warnNo.AnchorPoint = Vector2.new(0.5, 0.5)
 warnNo.BackgroundColor3 = COLORS.AccentGreen
 warnNo.TextColor3 = COLORS.TextWhite
+warnNo.Font = Enum.Font.GothamBlack
+warnNo.TextSize = 16
 warnNo.Parent = warnBox
 applyProStyle(warnNo, 6, COLORS.Glow, 1)
 
@@ -404,6 +434,13 @@ oddsList.BorderSizePixel = 0
 oddsList.ScrollBarThickness = 4
 oddsList.ScrollBarImageColor3 = COLORS.AccentBlue
 oddsList.Parent = rightPanel
+
+local listPadding = Instance.new("UIPadding")
+listPadding.PaddingTop = UDim.new(0, 5)
+listPadding.PaddingBottom = UDim.new(0, 5)
+listPadding.PaddingLeft = UDim.new(0, 5)
+listPadding.PaddingRight = UDim.new(0, 10)
+listPadding.Parent = oddsList
 
 local oddsLayout = Instance.new("UIListLayout")
 oddsLayout.Padding = UDim.new(0, 8)
@@ -602,20 +639,6 @@ for _, statName in ipairs(statNames) do
 	lbl.Parent = frame
 end
 
--- Barre du bas
-local bottomBar = Instance.new("Frame")
-bottomBar.Size = UDim2.new(1, 0, 0.15, 0)
-bottomBar.Position = UDim2.new(0, 0, 1, 0)
-bottomBar.AnchorPoint = Vector2.new(0, 1)
-bottomBar.BackgroundColor3 = COLORS.PanelDark
-bottomBar.Parent = familyFrame
-
-local sep = Instance.new("Frame")
-sep.Size = UDim2.new(1, 0, 0, 2)
-sep.BackgroundColor3 = COLORS.AccentBlue
-sep.BorderSizePixel = 0
-sep.Parent = bottomBar
-
 local rerollBtn = Instance.new("TextButton")
 rerollBtn.Text = "SPINS (" .. currentSpins .. ")"
 rerollBtn.Size = UDim2.new(0, 250, 0, 60)
@@ -673,12 +696,11 @@ local function createRollItem(family, order)
 	return lbl
 end
 
--- Fonction isolée pour lancer le spin (après check warning)
+-- Fonction d'exécution du Spin
 local function executeSpin()
 	isRolling = true
-	-- On décrémente visuellement tout de suite
-	-- (Note: Il faut impérativement que ton serveur gère aussi la décrémentation sécurisée)
-	UpdateSpinsEvent:FireServer(1) -- On demande au serveur de retirer 1 spin (adapter selon ton script serveur)
+	currentSpins = currentSpins - 1
+	if UpdateSpinsEvent then UpdateSpinsEvent:FireServer(1) end
 
 	local result = pickRandomFamily()
 
@@ -710,7 +732,6 @@ local function executeSpin()
 	tween:Play()
 	tween.Completed:Wait()
 
-	-- Effets
 	if result.name == "Hunter" or result.name == "Visionary" or result.name == "Aura Farmer" then
 		createConfettiExplosion(result.color, centerZone)
 	end
@@ -718,11 +739,9 @@ local function executeSpin()
 		triggerGlitchEffect(winnerItem, rollWindow)
 	end
 
-	-- Mise à jour bouton
 	rerollBtn.Text = "SPINS (" .. currentSpins .. ")"
 	rerollBtn.BackgroundColor3 = COLORS.AccentBlue
 
-	-- Mise à jour Slot 1 & Stockage
 	currentEquippedFamilyData = result 
 	if slot1Label then
 		slot1Label.Text = "SLOT 1: " .. string.upper(result.name)
@@ -734,7 +753,6 @@ local function executeSpin()
 	isRolling = false
 end
 
--- Fonction déclencheur principal
 local function performRoll()
 	if isRolling then return end
 
@@ -747,25 +765,19 @@ local function performRoll()
 		return
 	end
 
-	-- --- CHECK WARNING / SECURITY ---
 	if currentEquippedFamilyData then
 		local famName = currentEquippedFamilyData.name
 		local rarity = currentEquippedFamilyData.rarity
-
-		-- Si c'est une rareté "dangereuse" ET qu'on ne l'a pas coché dans l'autoskip (donc skippedFamilies[famName] est nil ou false)
 		if SAFETY_RARITIES[rarity] and not skippedFamilies[famName] then
-			-- AFFICHER LE POPUP
-			warnDesc.Text = "You currently have <font color='#FFCC00'>" .. string.upper(famName) .. "</font>.<br/>Are you sure you want to reroll?"
+			warnDesc.Text = "You have <font color='#FFCC00'>" .. string.upper(famName) .. "</font>.<br/>Are you sure you want to reroll?"
 			warningFrame.Visible = true
-			return -- On arrête ici, on attend la réponse
+			return 
 		end
 	end
 
-	-- Si pas de warning nécessaire, on lance direct
 	executeSpin()
 end
 
--- Events Boutons Warning
 warnYes.MouseButton1Click:Connect(function()
 	warningFrame.Visible = false
 	executeSpin()
@@ -777,7 +789,7 @@ end)
 rerollBtn.MouseButton1Click:Connect(performRoll)
 
 -- ====================================================================
--- MENU PRINCIPAL & RESTE (PLAY, SETTINGS...)
+-- MENU PRINCIPAL
 -- ====================================================================
 
 local settingsFrame = Instance.new("Frame")
@@ -831,7 +843,7 @@ shadow.Parent = mainFrame
 
 local buttonContainer = Instance.new("Frame")
 buttonContainer.Size = UDim2.fromOffset(300, 300)
-buttonContainer.Position = UDim2.new(0.5, 0, 0.65, 0) 
+buttonContainer.Position = UDim2.new(0.5, 0, 0.80, 0) 
 buttonContainer.AnchorPoint = Vector2.new(0.5, 0.5)
 buttonContainer.BackgroundTransparency = 1
 buttonContainer.Parent = mainFrame
@@ -909,6 +921,7 @@ end)
 
 task.spawn(function()
 	toggleCoreUI(false)
+
 	if not ReplicatedFirst:FindFirstChild("LoadingComplete") then
 		local success = pcall(function()
 			ReplicatedFirst:WaitForChild("LoadingComplete", 60)
